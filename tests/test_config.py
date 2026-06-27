@@ -2,11 +2,11 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from agentops_eval.config import load_agent_registry
+from agentops_eval.config import ConfigError, load_agent_registry
 
 
 class ConfigTests(unittest.TestCase):
-    def test_load_agent_registry_reads_three_agents(self):
+    def test_load_agent_registry_reads_any_number_of_agents(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config = Path(temp_dir) / "agents.yaml"
             config.write_text(
@@ -19,9 +19,12 @@ class ConfigTests(unittest.TestCase):
                         "  two:",
                         '    command: "python two.py"',
                         "    timeout_seconds: 6",
-                        "  three:",
-                        '    command: "python three.py"',
+                        "  four:",
+                        '    command: "python four.py"',
                         "    timeout_seconds: 7",
+                        "  five:",
+                        '    command: "python five.py"',
+                        "    timeout_seconds: 8",
                     ]
                 ),
                 encoding="utf-8",
@@ -29,8 +32,35 @@ class ConfigTests(unittest.TestCase):
 
             agents = load_agent_registry(config)
 
-            self.assertEqual([agent.name for agent in agents], ["one", "two", "three"])
+            self.assertEqual([agent.name for agent in agents], ["one", "two", "four", "five"])
             self.assertEqual(agents[1].timeout_seconds, 6)
+
+    def test_load_agent_registry_requires_at_least_one_agent(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = Path(temp_dir) / "agents.yaml"
+            config.write_text("agents:\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ConfigError, "at least 1 agent"):
+                load_agent_registry(config)
+
+    def test_load_agent_registry_rejects_duplicate_names(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = Path(temp_dir) / "agents.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "agents:",
+                        "  one:",
+                        '    command: "python one.py"',
+                        "  one:",
+                        '    command: "python one-again.py"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ConfigError, "Duplicate agent names"):
+                load_agent_registry(config)
 
 
 if __name__ == "__main__":

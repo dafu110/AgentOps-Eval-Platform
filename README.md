@@ -1,6 +1,6 @@
 # AgentOps-Eval-Platform
 
-AgentOps-Eval-Platform is a local-first evaluation, monitoring, and debugging agent for three existing agents.
+AgentOps-Eval-Platform is a local-first evaluation, monitoring, and debugging agent for existing AI agents.
 
 It runs shared test cases against each agent, validates outputs with deterministic checks and rubric rules, writes structured telemetry, and produces failure reports that are useful for prompt, tool, and runtime debugging.
 
@@ -13,7 +13,7 @@ python -m agentops_eval.cli run --suite sample
 python -m agentops_eval.cli report --run latest
 ```
 
-The default registry uses mock command agents so the platform works immediately. Replace each command in `configs/agents.yaml` with the command that invokes your real agents.
+The default registry uses mock command agents so the platform works immediately. Replace each command in `configs/agents.yaml` with commands that invoke your real agents. You can register one agent or many agents.
 
 ## Connect Existing Agents
 
@@ -34,10 +34,22 @@ agents:
     timeout_seconds: 60
 ```
 
+Run all registered agents:
+
+```powershell
+python -m agentops_eval.cli run --suite sample
+```
+
+Run a subset:
+
+```powershell
+python -m agentops_eval.cli run --suite sample --agent planner --agent executor
+```
+
 ## Repository Layout
 
 - `agentops_eval/`: evaluation runner, checks, monitoring events, debugging report generation.
-- `configs/agents.yaml`: three-agent registry.
+- `configs/agents.yaml`: agent registry.
 - `evals/sample.jsonl`: starter eval cases.
 - `docs/agent-spec.md`: authority, tool gates, loop, memory, escalation, and failure handling.
 - `docs/eval-plan.md`: metrics, rubric, baselines, pass bars, and regression gate.

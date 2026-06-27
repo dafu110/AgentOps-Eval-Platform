@@ -1,4 +1,4 @@
-# Eval Plan: Three-Agent Operations Quality
+# Eval Plan: Agent Operations Quality
 
 ## 1. What We're Measuring
 

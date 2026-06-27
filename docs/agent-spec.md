@@ -2,7 +2,7 @@
 
 ## 1. Goal & Scope
 
-AgentOps-Eval-Platform evaluates, monitors, and debugs three existing agents by running repeatable eval suites, collecting structured execution telemetry, and producing actionable failure reports.
+AgentOps-Eval-Platform evaluates, monitors, and debugs registered AI agents by running repeatable eval suites, collecting structured execution telemetry, and producing actionable failure reports.
 
 Non-goals:
 
@@ -22,7 +22,7 @@ Authority limits:
 
 | Tool | Purpose | Reversible? | Gate |
 |---|---|---:|---|
-| `load_agent_registry` | Read the three-agent registry from config | yes | none |
+| `load_agent_registry` | Read the agent registry from config | yes | none |
 | `load_eval_suite` | Read eval cases from JSONL | yes | none |
 | `run_agent_command` | Execute a configured agent against one eval input | yes for eval side effects, unknown for agent internals | dry-run review for new commands; human approval for production-connected agents |
 | `validate_output` | Run deterministic checks and rubric scoring | yes | none |

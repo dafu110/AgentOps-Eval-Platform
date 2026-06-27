@@ -47,8 +47,14 @@ def load_agent_registry(path: Path) -> list[AgentConfig]:
     if current_name is not None:
         agents.append(_agent_from_mapping(current_name, current))
 
-    if len(agents) != 3:
-        raise ConfigError(f"Expected exactly 3 agents, found {len(agents)} in {path}")
+    if not agents:
+        raise ConfigError(f"Expected at least 1 agent in {path}")
+
+    names = [agent.name for agent in agents]
+    duplicate_names = sorted({name for name in names if names.count(name) > 1})
+    if duplicate_names:
+        joined = ", ".join(duplicate_names)
+        raise ConfigError(f"Duplicate agent names in {path}: {joined}")
 
     return agents
 
