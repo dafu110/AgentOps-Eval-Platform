@@ -38,6 +38,7 @@ class CheckResult:
 
 @dataclass
 class AgentRunResult:
+    trace_id: str
     run_id: str
     agent: str
     case_id: str
@@ -52,6 +53,7 @@ class AgentRunResult:
 
     def to_record(self) -> dict[str, Any]:
         return {
+            "trace_id": self.trace_id,
             "run_id": self.run_id,
             "agent": self.agent,
             "case_id": self.case_id,

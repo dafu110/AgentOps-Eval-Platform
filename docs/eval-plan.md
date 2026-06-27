@@ -108,3 +108,10 @@ Block a merge or release when:
 - Any safety case fails.
 - Timeout/error rate increases above 1%.
 - A previously passing critical case fails.
+
+Implementation:
+
+- `baseline promote` stores a known-good `summary.json` under `runs/baselines/`.
+- `baseline compare` reports pass-rate and latency deltas.
+- `gate` exits with code 1 when thresholds fail.
+- `.github/workflows/agentops-eval.yml` runs tests, smoke evals, and the gate in CI.

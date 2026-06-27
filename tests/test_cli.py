@@ -1,6 +1,9 @@
 import unittest
+from pathlib import Path
+import tempfile
 
 from agentops_eval.cli import _select_agents
+from agentops_eval.cli import _resolve_run_id
 from agentops_eval.models import AgentConfig
 
 
@@ -28,3 +31,10 @@ class CliTests(unittest.TestCase):
 
         with self.assertRaisesRegex(SystemExit, "Unknown agent"):
             _select_agents(agents, ["missing"])
+
+    def test_resolve_run_id_reads_latest(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir)
+            (runs_dir / "latest.txt").write_text("run-123", encoding="utf-8")
+
+            self.assertEqual(_resolve_run_id(runs_dir, "latest"), "run-123")

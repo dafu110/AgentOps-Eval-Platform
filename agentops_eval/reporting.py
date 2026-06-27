@@ -64,6 +64,7 @@ def write_debug_report(path: Path, results: list[AgentRunResult]) -> None:
             lines.append(f"### Case: {failure.case_id}")
             lines.append("")
             lines.append(f"- Error type: `{failure.error_type or 'check_failed'}`")
+            lines.append(f"- Trace id: `{failure.trace_id}`")
             lines.append(f"- Exit code: `{failure.exit_code}`")
             lines.append(f"- Latency: `{failure.latency_ms}ms`")
             failed_checks = [check for check in failure.checks if not check.passed]

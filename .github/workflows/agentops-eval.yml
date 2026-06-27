@@ -1,0 +1,38 @@
+name: AgentOps Eval
+
+on:
+  pull_request:
+    paths:
+      - "agentops_eval/**"
+      - "configs/**"
+      - "evals/**"
+      - "tests/**"
+      - ".github/workflows/agentops-eval.yml"
+  push:
+    branches: ["main"]
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+
+      - name: Run smoke eval
+        run: python -m agentops_eval.cli run --suite sample --run-id ci-smoke
+
+      - name: CI quality gate
+        run: python -m agentops_eval.cli gate --run ci-smoke --min-pass-rate 0.90 --max-error-rate 0.10
+
+      - name: Upload eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentops-eval-results
+          path: runs/ci-smoke

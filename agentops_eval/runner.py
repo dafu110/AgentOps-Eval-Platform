@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import json
-import shlex
-import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .adapters import run_command_agent
 from .checks import validate_output
 from .models import AgentConfig, AgentRunResult, EvalCase
 from .monitoring import EventWriter
 from .reporting import write_debug_report, write_summary
+from .tracing import make_trace_id, write_trace
 
 
 def run_suite(
@@ -31,7 +31,7 @@ def run_suite(
     with results_path.open("w", encoding="utf-8") as result_file:
         for case in cases:
             for agent in agents:
-                result = run_agent_case(run_id, agent, case, events)
+                result = run_agent_case(run_id, run_dir, agent, case, events)
                 results.append(result)
                 result_file.write(json.dumps(result.to_record(), ensure_ascii=True) + "\n")
 
@@ -44,65 +44,44 @@ def run_suite(
 
 def run_agent_case(
     run_id: str,
+    run_dir: Path,
     agent: AgentConfig,
     case: EvalCase,
     events: EventWriter,
 ) -> AgentRunResult:
-    events.emit("case_started", run_id=run_id, agent=agent.name, case_id=case.case_id)
+    trace_id = make_trace_id(run_id, agent.name, case.case_id)
+    events.emit("case_started", run_id=run_id, trace_id=trace_id, agent=agent.name, case_id=case.case_id)
     start = time.perf_counter()
-    stdout = ""
-    stderr = ""
-    exit_code: int | None = None
-    timed_out = False
-    error_type: str | None = None
-
-    try:
-        completed = subprocess.run(
-            shlex.split(agent.command),
-            input=case.input_text,
-            text=True,
-            capture_output=True,
-            timeout=agent.timeout_seconds,
-            check=False,
-        )
-        stdout = completed.stdout.strip()
-        stderr = completed.stderr.strip()
-        exit_code = completed.returncode
-        if completed.returncode != 0:
-            error_type = "non_zero_exit"
-    except subprocess.TimeoutExpired as exc:
-        timed_out = True
-        error_type = "timeout"
-        stdout = (exc.stdout or "").strip() if isinstance(exc.stdout, str) else ""
-        stderr = (exc.stderr or "").strip() if isinstance(exc.stderr, str) else ""
-    except OSError as exc:
-        error_type = "command_error"
-        stderr = str(exc)
+    command_result = run_command_agent(agent, case)
 
     latency_ms = int((time.perf_counter() - start) * 1000)
-    checks = validate_output(case, stdout) if not timed_out and exit_code == 0 else []
-    passed = bool(checks) and all(check.passed for check in checks) and not timed_out and exit_code == 0
+    checks = validate_output(case, command_result.stdout) if not command_result.timed_out and command_result.exit_code == 0 else []
+    passed = bool(checks) and all(check.passed for check in checks) and not command_result.timed_out and command_result.exit_code == 0
 
     result = AgentRunResult(
+        trace_id=trace_id,
         run_id=run_id,
         agent=agent.name,
         case_id=case.case_id,
         passed=passed,
         latency_ms=latency_ms,
-        timed_out=timed_out,
-        exit_code=exit_code,
-        stdout=stdout,
-        stderr=stderr,
+        timed_out=command_result.timed_out,
+        exit_code=command_result.exit_code,
+        stdout=command_result.stdout,
+        stderr=command_result.stderr,
         checks=checks,
-        error_type=error_type,
+        error_type=command_result.error_type,
     )
+    trace_path = write_trace(run_dir, agent, case, result)
     events.emit(
         "case_finished",
         run_id=run_id,
+        trace_id=trace_id,
         agent=agent.name,
         case_id=case.case_id,
         passed=passed,
         latency_ms=latency_ms,
-        error_type=error_type,
+        error_type=command_result.error_type,
+        trace_path=str(trace_path),
     )
     return result
