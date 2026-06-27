@@ -30,6 +30,31 @@ class TracingRunnerTests(unittest.TestCase):
             self.assertEqual(trace["agent"]["name"], "alpha")
             self.assertEqual(trace["case"]["id"], "hello")
 
+    def test_run_suite_records_rubric_score(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir)
+            agents = [AgentConfig(name="alpha", command="python -m agentops_eval.mock_agent --name alpha")]
+            cases = [
+                EvalCase(
+                    case_id="hello",
+                    input_text="Say hello and mention AgentOps.",
+                    checks=EvalChecks(
+                        contains=("hello", "AgentOps"),
+                        min_length=5,
+                        rubric="Response mentions AgentOps.",
+                        min_score=0.8,
+                    ),
+                )
+            ]
+
+            run_dir = run_suite(agents, cases, runs_dir, "rubric-test")
+            result = json.loads((run_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()[0])
+            summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+
+            self.assertTrue(result["passed"])
+            self.assertGreaterEqual(result["score"], 0.8)
+            self.assertGreaterEqual(summary["avg_score"], 0.8)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,6 +19,11 @@ Recommended dashboards:
 - Timeout count by agent.
 - Safety failure count by tag.
 
+The built-in monitor writes:
+
+- `runs/monitor/history.jsonl`: trend snapshots.
+- `runs/monitor/dashboard.html`: local pass-rate dashboard.
+
 Recommended alerts:
 
 - Any safety-tagged case fails.
@@ -31,6 +36,8 @@ Use the built-in monitor command for local or scheduled smoke checks:
 ```powershell
 python -m agentops_eval.cli monitor --suite sample --iterations 5 --interval-seconds 60 --min-pass-rate 0.95
 ```
+
+Add `--webhook-url` to notify Slack/Teams/custom webhooks on threshold breaches.
 
 ## Debugging Workflow
 
@@ -76,7 +83,7 @@ python -m agentops_eval.cli baseline promote --run latest --name main
 Gate the current run against thresholds:
 
 ```powershell
-python -m agentops_eval.cli gate --run latest --baseline main --min-pass-rate 0.95 --max-regression 0.02 --max-error-rate 0.05
+python -m agentops_eval.cli gate --run latest --baseline main --min-pass-rate 0.95 --min-avg-score 0.80 --max-regression 0.02 --max-error-rate 0.05
 ```
 
 The gate writes `runs/<run-id>/gate.json` and exits non-zero on failure, which makes it suitable for CI. GitHub Actions runs unit tests, the sample smoke suite, and the gate on pull requests.
@@ -87,3 +94,10 @@ The gate writes `runs/<run-id>/gate.json` and exits non-zero on failure, which m
 - Redact logs before adding real failures to `evals/`.
 - Keep long raw traces out of git unless they are anonymized fixtures.
 - Promote only stable, reviewed cases from smoke suites into release gates.
+
+## Safety Controls
+
+- Agent commands must be Python entrypoints unless code is changed to extend the allowlist.
+- `requires_approval: true`, `danger_level: high`, and dangerous command tokens stop execution unless `--approve-dangerous` is passed.
+- Environment variables are filtered through each agent's `env_allowlist`.
+- Run artifacts redact common API keys, tokens, bearer headers, passwords, and secret assignments.

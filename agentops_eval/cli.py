@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .baseline import compare_to_baseline, load_summary, promote_baseline
+from .calibration import calibrate_judge
 from .config import load_agent_registry
 from .gate import evaluate_gate
 from .models import AgentConfig
@@ -34,6 +35,8 @@ def main() -> int:
     run_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     run_parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
     run_parser.add_argument("--run-id", default=None)
+    run_parser.add_argument("--approve-dangerous", action="store_true", help="Allow approved high-risk agent commands.")
+    run_parser.add_argument("--judge-command", default="", help="Optional command that scores outputs as JSON {score, reasoning}.")
     run_parser.add_argument(
         "--agent",
         action="append",
@@ -63,11 +66,18 @@ def main() -> int:
     gate_parser.add_argument("--min-pass-rate", type=float, default=0.9)
     gate_parser.add_argument("--max-regression", type=float, default=0.02)
     gate_parser.add_argument("--max-error-rate", type=float, default=0.1)
+    gate_parser.add_argument("--min-avg-score", type=float, default=0.0)
 
     trace_parser = subparsers.add_parser("trace", help="Print a debug trace by trace id.")
     trace_parser.add_argument("--run", default="latest")
     trace_parser.add_argument("--trace-id", required=True)
     trace_parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
+
+    calibrate_parser = subparsers.add_parser("calibrate", help="Compare judge scores against human labels.")
+    calibrate_parser.add_argument("--run", default="latest")
+    calibrate_parser.add_argument("--labels", type=Path, required=True)
+    calibrate_parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
+    calibrate_parser.add_argument("--tolerance", type=float, default=0.15)
 
     monitor_parser = subparsers.add_parser("monitor", help="Continuously run an eval suite and alert on pass-rate drops.")
     monitor_parser.add_argument("--suite", default="sample")
@@ -76,6 +86,7 @@ def main() -> int:
     monitor_parser.add_argument("--interval-seconds", type=int, default=60)
     monitor_parser.add_argument("--iterations", type=int, default=1)
     monitor_parser.add_argument("--min-pass-rate", type=float, default=0.9)
+    monitor_parser.add_argument("--webhook-url", default="")
     monitor_parser.add_argument("--agent", action="append", default=None)
 
     args = parser.parse_args()
@@ -95,7 +106,7 @@ def main() -> int:
         agents = load_agent_registry(args.config)
         agents = _select_agents(agents, args.agent)
         cases = load_suite(DEFAULT_EVAL_DIR / f"{args.suite}.jsonl")
-        run_dir = run_suite(agents, cases, args.runs_dir, args.run_id)
+        run_dir = run_suite(agents, cases, args.runs_dir, args.run_id, args.approve_dangerous, args.judge_command)
         print(f"Run complete: {run_dir} ({len(agents)} agent(s), {len(cases)} case(s))")
         return 0
 
@@ -129,6 +140,7 @@ def main() -> int:
             args.min_pass_rate,
             args.max_regression,
             args.max_error_rate,
+            args.min_avg_score,
         )
         print(json.dumps(report, indent=2))
         return 0 if passed else 1
@@ -137,6 +149,14 @@ def main() -> int:
         run_id = _resolve_run_id(args.runs_dir, args.run)
         path = resolve_trace_path(args.runs_dir, run_id, args.trace_id)
         print(path.read_text(encoding="utf-8"))
+        return 0
+
+    if args.command == "calibrate":
+        run_id = _resolve_run_id(args.runs_dir, args.run)
+        report = calibrate_judge(args.runs_dir / run_id / "results.jsonl", args.labels, args.tolerance)
+        output_path = args.runs_dir / run_id / "calibration.json"
+        output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(json.dumps(report, indent=2))
         return 0
 
     if args.command == "monitor":
@@ -149,6 +169,7 @@ def main() -> int:
             args.interval_seconds,
             args.iterations,
             args.min_pass_rate,
+            args.webhook_url,
         )
         print(json.dumps(snapshots, indent=2))
         return 1 if any(snapshot["alert"] for snapshot in snapshots) else 0

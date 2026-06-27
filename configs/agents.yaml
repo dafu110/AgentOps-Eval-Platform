@@ -1,13 +1,28 @@
 agents:
-  alpha:
-    command: "python -m agentops_eval.mock_agent --name alpha"
-    timeout_seconds: 10
-    description: "Replace with the first existing agent command."
-  beta:
-    command: "python -m agentops_eval.mock_agent --name beta"
-    timeout_seconds: 10
-    description: "Replace with the second existing agent command."
-  gamma:
-    command: "python -m agentops_eval.mock_agent --name gamma"
-    timeout_seconds: 10
-    description: "Replace with the third existing agent command."
+  peopleops:
+    adapter: http-json
+    repo_url: "https://github.com/dafu110/peopleops-agent-platform"
+    command: "python -m agentops_eval.http_agent --url http://127.0.0.1:8001/chat --input-field message --output-field reply"
+    health_url: "http://127.0.0.1:8001/health"
+    timeout_seconds: 45
+    description: "PeopleOps Agent Platform FastAPI /chat endpoint."
+    danger_level: medium
+    requires_approval: false
+  agentflow:
+    adapter: agentflow-http
+    repo_url: "https://github.com/dafu110/Agent-Flow-Studio"
+    command: "python -m agentops_eval.agentflow_adapter --base-url http://127.0.0.1:8002 --email eval@example.com --password eval-password"
+    health_url: "http://127.0.0.1:8002/api/health"
+    timeout_seconds: 60
+    description: "AgentFlow Studio backend /api/generate-canvas endpoint."
+    danger_level: medium
+    requires_approval: false
+  bigdata:
+    adapter: bigdata-http
+    repo_url: "https://github.com/dafu110/Big-Data-Analytics-Agent"
+    command: "python -m agentops_eval.bigdata_adapter --url http://127.0.0.1:5000/api/analyze --sample-file ../Big-Data-Analytics-Agent/data/sample_ecommerce_gmv.csv"
+    health_url: "http://127.0.0.1:5000/api/health"
+    timeout_seconds: 90
+    description: "Big Data Analytics Agent Flask /api/analyze endpoint."
+    danger_level: medium
+    requires_approval: false

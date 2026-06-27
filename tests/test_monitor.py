@@ -26,6 +26,8 @@ class MonitorTests(unittest.TestCase):
 
             self.assertEqual(len(snapshots), 1)
             self.assertFalse(snapshots[0]["alert"])
+            self.assertTrue((Path(temp_dir) / "monitor" / "history.jsonl").exists())
+            self.assertTrue((Path(temp_dir) / "monitor" / "dashboard.html").exists())
 
 
 if __name__ == "__main__":

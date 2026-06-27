@@ -1,0 +1,19 @@
+agents:
+  alpha:
+    adapter: command
+    command: "python -m agentops_eval.mock_agent --name alpha"
+    timeout_seconds: 10
+    description: "Mock agent for tests and CI."
+    danger_level: low
+  beta:
+    adapter: command
+    command: "python -m agentops_eval.mock_agent --name beta"
+    timeout_seconds: 10
+    description: "Mock agent for tests and CI."
+    danger_level: low
+  gamma:
+    adapter: command
+    command: "python -m agentops_eval.mock_agent --name gamma"
+    timeout_seconds: 10
+    description: "Mock agent for tests and CI."
+    danger_level: low

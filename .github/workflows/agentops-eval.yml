@@ -25,10 +25,10 @@ jobs:
         run: python -m unittest discover -s tests
 
       - name: Run smoke eval
-        run: python -m agentops_eval.cli run --suite sample --run-id ci-smoke
+        run: python -m agentops_eval.cli run --suite sample --config configs/agents.mock.yaml --run-id ci-smoke
 
       - name: CI quality gate
-        run: python -m agentops_eval.cli gate --run ci-smoke --min-pass-rate 0.90 --max-error-rate 0.10
+        run: python -m agentops_eval.cli gate --run ci-smoke --min-pass-rate 0.90 --min-avg-score 0.80 --max-error-rate 0.10
 
       - name: Upload eval artifacts
         if: always()

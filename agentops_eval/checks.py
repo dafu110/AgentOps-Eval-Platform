@@ -53,4 +53,13 @@ def validate_output(case: EvalCase, output: str) -> list[CheckResult]:
             )
         )
 
+    if case.checks.rubric:
+        checks.append(
+            CheckResult(
+                name="rubric_present",
+                passed=True,
+                detail=case.checks.rubric,
+            )
+        )
+
     return checks

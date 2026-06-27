@@ -14,12 +14,14 @@ def evaluate_gate(
     min_pass_rate: float,
     max_regression: float,
     max_error_rate: float,
+    min_avg_score: float = 0.0,
 ) -> tuple[bool, dict[str, Any]]:
     current_path = runs_dir / run_id / "summary.json"
     current = load_summary(current_path)
     total = int(current.get("total", 0))
     failed = int(current.get("failed", 0))
     pass_rate = float(current.get("pass_rate", 0))
+    avg_score = current.get("avg_score")
     error_rate = round(failed / total, 4) if total else 1.0
 
     checks: list[dict[str, Any]] = [
@@ -36,6 +38,16 @@ def evaluate_gate(
             "threshold": max_error_rate,
         },
     ]
+    if min_avg_score > 0:
+        actual_score = float(avg_score or 0)
+        checks.append(
+            {
+                "name": "min_avg_score",
+                "passed": actual_score >= min_avg_score,
+                "actual": actual_score,
+                "threshold": min_avg_score,
+            }
+        )
 
     baseline_comparison = None
     if baseline_name:

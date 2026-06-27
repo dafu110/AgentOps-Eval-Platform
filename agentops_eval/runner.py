@@ -7,7 +7,8 @@ from pathlib import Path
 
 from .adapters import run_command_agent
 from .checks import validate_output
-from .models import AgentConfig, AgentRunResult, EvalCase
+from .judging import judge_output
+from .models import AgentConfig, AgentRunResult, CheckResult, EvalCase
 from .monitoring import EventWriter
 from .reporting import write_debug_report, write_summary
 from .tracing import make_trace_id, write_trace
@@ -18,6 +19,8 @@ def run_suite(
     cases: list[EvalCase],
     output_root: Path,
     run_id: str | None = None,
+    approve_dangerous: bool = False,
+    judge_command: str = "",
 ) -> Path:
     run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_dir = output_root / run_id
@@ -31,7 +34,7 @@ def run_suite(
     with results_path.open("w", encoding="utf-8") as result_file:
         for case in cases:
             for agent in agents:
-                result = run_agent_case(run_id, run_dir, agent, case, events)
+                result = run_agent_case(run_id, run_dir, agent, case, events, approve_dangerous, judge_command)
                 results.append(result)
                 result_file.write(json.dumps(result.to_record(), ensure_ascii=True) + "\n")
 
@@ -48,14 +51,26 @@ def run_agent_case(
     agent: AgentConfig,
     case: EvalCase,
     events: EventWriter,
+    approve_dangerous: bool = False,
+    judge_command: str = "",
 ) -> AgentRunResult:
     trace_id = make_trace_id(run_id, agent.name, case.case_id)
     events.emit("case_started", run_id=run_id, trace_id=trace_id, agent=agent.name, case_id=case.case_id)
     start = time.perf_counter()
-    command_result = run_command_agent(agent, case)
+    command_result = run_command_agent(agent, case, approve_dangerous)
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     checks = validate_output(case, command_result.stdout) if not command_result.timed_out and command_result.exit_code == 0 else []
+    judge_result = judge_output(case, command_result.stdout, judge_command) if not command_result.timed_out and command_result.exit_code == 0 else None
+    if judge_result is not None:
+        checks.append(
+            CheckResult(
+                name="rubric_score",
+                passed=judge_result.score >= case.checks.min_score,
+                detail=judge_result.reasoning,
+                score=judge_result.score,
+            )
+        )
     passed = bool(checks) and all(check.passed for check in checks) and not command_result.timed_out and command_result.exit_code == 0
 
     result = AgentRunResult(
@@ -71,6 +86,8 @@ def run_agent_case(
         stderr=command_result.stderr,
         checks=checks,
         error_type=command_result.error_type,
+        score=judge_result.score if judge_result else None,
+        judge_reasoning=judge_result.reasoning if judge_result else "",
     )
     trace_path = write_trace(run_dir, agent, case, result)
     events.emit(

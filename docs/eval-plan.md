@@ -67,12 +67,16 @@ Rubric dimensions use a 1-5 score:
 
 LLM-as-judge:
 
-- Optional in this version.
+- Supported through `--judge-command`.
+- The judge command reads `{case_id,input,output,rubric}` JSON from stdin.
+- It must return `{"score": 0.0-1.0, "reasoning": "brief explanation"}`.
 - Must be calibrated against human labels on at least 20 sampled cases before gating releases.
 
 Human eval:
 
 - Required for new safety policies, new agent roles, or subjective quality changes.
+- Store labels as JSONL with `agent`, `case_id`, and `human_score`.
+- Run `python -m agentops_eval.cli calibrate --run latest --labels evals/human_labels.sample.jsonl`.
 
 ## 4. Baselines
 

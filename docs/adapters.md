@@ -36,7 +36,7 @@ The wrapper sends:
 {"input": "eval prompt"}
 ```
 
-By default it reads the response field named `output`. Use `--input-field` and `--output-field` when your service uses different names.
+By default it reads the response field named `output`. Use `--input-field` and `--output-field` when your service uses different names. Nested output paths such as `data.answer` are supported.
 
 Optional headers:
 
@@ -46,6 +46,46 @@ command: "python -m agentops_eval.http_agent --url http://localhost:8080/invoke 
 
 Do not put real secrets in committed config files. Use environment-specific wrappers or local config overlays for credentials.
 
+## Existing Agent Registry
+
+The default `configs/agents.yaml` is wired for the three existing repositories:
+
+| Agent | Repository | Adapter | Endpoint |
+|---|---|---|---|
+| `peopleops` | `dafu110/peopleops-agent-platform` | `http_agent` | `POST /chat` |
+| `agentflow` | `dafu110/Agent-Flow-Studio` | `agentflow_adapter` | `POST /api/generate-canvas` |
+| `bigdata` | `dafu110/Big-Data-Analytics-Agent` | `bigdata_adapter` | `POST /api/analyze` |
+
+Expected local service ports:
+
+```powershell
+# peopleops-agent-platform
+python -m uvicorn api:app --host 127.0.0.1 --port 8001
+
+# Agent-Flow-Studio/canvas-backend
+python -m uvicorn main:app --host 127.0.0.1 --port 8002
+
+# Big-Data-Analytics-Agent
+python app.py
+```
+
+Then run:
+
+```powershell
+python -m agentops_eval.cli run --suite sample --config configs/agents.yaml
+```
+
+Use `configs/agents.mock.yaml` when those services are not running.
+
+This is intentional: real-agent mode should fail loudly when an agent service is unavailable.
+
 ## SDK or Queue Agents
 
 Create a tiny wrapper script that reads `stdin`, calls your SDK or queue, prints the final answer, and exits non-zero on runtime failure. The eval runner does not need to know the internal transport.
+
+## Security Contract
+
+- Registry commands are restricted to Python entrypoints.
+- Dangerous shell tokens and agents marked `requires_approval` require `--approve-dangerous`.
+- Only `PATH`, `PYTHONPATH`, `PYTHONIOENCODING`, and explicitly allowlisted env vars are passed to child processes.
+- stdout/stderr are redacted for common secret shapes before persistence.

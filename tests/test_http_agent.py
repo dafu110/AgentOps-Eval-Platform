@@ -9,7 +9,7 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers["Content-Length"])
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
-        response = json.dumps({"answer": f"received {payload['input']}"}).encode("utf-8")
+        response = json.dumps({"data": {"answer": f"received {payload['input']}"}}).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(response)))
@@ -28,7 +28,7 @@ class HttpAgentTests(unittest.TestCase):
         try:
             url = f"http://127.0.0.1:{server.server_port}/invoke"
             completed = subprocess.run(
-                ["python", "-m", "agentops_eval.http_agent", "--url", url, "--output-field", "answer"],
+                ["python", "-m", "agentops_eval.http_agent", "--url", url, "--output-field", "data.answer"],
                 input="hello",
                 text=True,
                 capture_output=True,

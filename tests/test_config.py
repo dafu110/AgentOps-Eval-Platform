@@ -35,6 +35,33 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual([agent.name for agent in agents], ["one", "two", "four", "five"])
             self.assertEqual(agents[1].timeout_seconds, 6)
 
+    def test_load_agent_registry_reads_extended_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = Path(temp_dir) / "agents.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "agents:",
+                        "  peopleops:",
+                        '    adapter: "http-json"',
+                        '    command: "python -m agentops_eval.http_agent --url http://localhost"',
+                        '    repo_url: "https://github.com/example/repo"',
+                        '    health_url: "http://localhost/health"',
+                        "    timeout_seconds: 12",
+                        "    requires_approval: true",
+                        "    danger_level: high",
+                        "    env_allowlist: OPENAI_API_KEY,MODEL",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            agent = load_agent_registry(config)[0]
+
+            self.assertEqual(agent.adapter, "http-json")
+            self.assertTrue(agent.requires_approval)
+            self.assertEqual(agent.env_allowlist, ("OPENAI_API_KEY", "MODEL"))
+
     def test_load_agent_registry_requires_at_least_one_agent(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config = Path(temp_dir) / "agents.yaml"

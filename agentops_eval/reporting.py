@@ -21,6 +21,7 @@ def write_summary(path: Path, results: list[AgentRunResult]) -> dict[str, Any]:
             "passed": agent_passed,
             "failed": len(agent_results) - agent_passed,
             "pass_rate": round(agent_passed / len(agent_results), 4) if agent_results else 0,
+            "avg_score": _average_score(agent_results),
             "p95_latency_ms": _percentile([result.latency_ms for result in agent_results], 95),
         }
 
@@ -29,6 +30,7 @@ def write_summary(path: Path, results: list[AgentRunResult]) -> dict[str, Any]:
         "passed": passed_count,
         "failed": total - passed_count,
         "pass_rate": round(passed_count / total, 4) if total else 0,
+        "avg_score": _average_score(results),
         "by_agent": by_agent,
     }
     path.write_text(json.dumps(summary, indent=2, ensure_ascii=True), encoding="utf-8")
@@ -87,3 +89,10 @@ def _percentile(values: list[int], percentile: int) -> int:
     ordered = sorted(values)
     index = round((percentile / 100) * (len(ordered) - 1))
     return ordered[index]
+
+
+def _average_score(results: list[AgentRunResult]) -> float | None:
+    scores = [result.score for result in results if result.score is not None]
+    if not scores:
+        return None
+    return round(sum(scores) / len(scores), 4)

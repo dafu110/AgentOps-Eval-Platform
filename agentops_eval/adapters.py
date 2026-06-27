@@ -3,8 +3,10 @@ from __future__ import annotations
 import shlex
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 from .models import AgentConfig, EvalCase
+from .security import build_sandbox_env, redact_secrets, validate_command_policy
 
 
 @dataclass(frozen=True)
@@ -16,7 +18,7 @@ class AgentCommandResult:
     error_type: str | None
 
 
-def run_command_agent(agent: AgentConfig, case: EvalCase) -> AgentCommandResult:
+def run_command_agent(agent: AgentConfig, case: EvalCase, approve_dangerous: bool = False) -> AgentCommandResult:
     """Invoke a real agent through the command adapter contract."""
     stdout = ""
     stderr = ""
@@ -25,16 +27,19 @@ def run_command_agent(agent: AgentConfig, case: EvalCase) -> AgentCommandResult:
     error_type: str | None = None
 
     try:
+        command = validate_command_policy(agent, approve_dangerous)
         completed = subprocess.run(
-            shlex.split(agent.command),
+            command,
             input=case.input_text,
             text=True,
             capture_output=True,
             timeout=agent.timeout_seconds,
             check=False,
+            cwd=agent.cwd or None,
+            env=build_sandbox_env(agent),
         )
-        stdout = completed.stdout.strip()
-        stderr = completed.stderr.strip()
+        stdout = redact_secrets(completed.stdout.strip())
+        stderr = redact_secrets(completed.stderr.strip())
         exit_code = completed.returncode
         if completed.returncode != 0:
             error_type = "non_zero_exit"
@@ -45,7 +50,10 @@ def run_command_agent(agent: AgentConfig, case: EvalCase) -> AgentCommandResult:
         stderr = (exc.stderr or "").strip() if isinstance(exc.stderr, str) else ""
     except OSError as exc:
         error_type = "command_error"
-        stderr = str(exc)
+        stderr = redact_secrets(str(exc))
+    except PermissionError as exc:
+        error_type = "security_policy"
+        stderr = redact_secrets(str(exc))
 
     return AgentCommandResult(
         stdout=stdout,

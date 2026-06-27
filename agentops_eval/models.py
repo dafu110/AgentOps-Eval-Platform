@@ -10,6 +10,13 @@ class AgentConfig:
     command: str
     timeout_seconds: int = 30
     description: str = ""
+    adapter: str = "command"
+    repo_url: str = ""
+    health_url: str = ""
+    cwd: str = ""
+    requires_approval: bool = False
+    danger_level: str = "low"
+    env_allowlist: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -19,6 +26,8 @@ class EvalChecks:
     min_length: int = 1
     expect_json: bool = False
     json_fields: tuple[str, ...] = ()
+    rubric: str = ""
+    min_score: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -34,6 +43,7 @@ class CheckResult:
     name: str
     passed: bool
     detail: str
+    score: float | None = None
 
 
 @dataclass
@@ -50,6 +60,8 @@ class AgentRunResult:
     stderr: str
     checks: list[CheckResult] = field(default_factory=list)
     error_type: str | None = None
+    score: float | None = None
+    judge_reasoning: str = ""
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -64,5 +76,7 @@ class AgentRunResult:
             "stdout": self.stdout,
             "stderr": self.stderr,
             "error_type": self.error_type,
+            "score": self.score,
+            "judge_reasoning": self.judge_reasoning,
             "checks": [check.__dict__ for check in self.checks],
         }

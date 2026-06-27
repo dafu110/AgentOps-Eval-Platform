@@ -48,6 +48,8 @@ def _case_from_record(record: dict[str, Any], line_number: int) -> EvalCase:
         min_length=int(checks_record.get("min_length", 1)),
         expect_json=bool(checks_record.get("expect_json", False)),
         json_fields=tuple(_string_list(checks_record.get("json_fields", []), "json_fields", line_number)),
+        rubric=str(checks_record.get("rubric", "")),
+        min_score=float(checks_record.get("min_score", 0.0)),
     )
     tags = tuple(_string_list(record.get("tags", []), "tags", line_number))
     return EvalCase(case_id=case_id, input_text=input_text, checks=checks, tags=tags)
