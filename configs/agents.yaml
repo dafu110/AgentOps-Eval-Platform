@@ -1,0 +1,13 @@
+agents:
+  alpha:
+    command: "python -m agentops_eval.mock_agent --name alpha"
+    timeout_seconds: 10
+    description: "Replace with the first existing agent command."
+  beta:
+    command: "python -m agentops_eval.mock_agent --name beta"
+    timeout_seconds: 10
+    description: "Replace with the second existing agent command."
+  gamma:
+    command: "python -m agentops_eval.mock_agent --name gamma"
+    timeout_seconds: 10
+    description: "Replace with the third existing agent command."
