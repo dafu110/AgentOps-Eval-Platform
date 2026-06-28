@@ -21,14 +21,17 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install package
+        run: python -m pip install -e .[dev]
+
       - name: Unit tests
         run: python -m unittest discover -s tests
 
       - name: Run smoke eval
-        run: python -m agentops_eval.cli run --suite sample --config configs/agents.mock.yaml --run-id ci-smoke
+        run: agentops-eval run --suite sample --config configs/agents.mock.yaml --run-id ci-smoke
 
       - name: CI quality gate
-        run: python -m agentops_eval.cli gate --run ci-smoke --min-pass-rate 0.90 --min-avg-score 0.80 --max-error-rate 0.10
+        run: agentops-eval gate --run ci-smoke --min-pass-rate 0.90 --min-avg-score 0.80 --max-error-rate 0.10
 
       - name: Upload eval artifacts
         if: always()

@@ -31,6 +31,7 @@ def write_summary(path: Path, results: list[AgentRunResult]) -> dict[str, Any]:
         "failed": total - passed_count,
         "pass_rate": round(passed_count / total, 4) if total else 0,
         "avg_score": _average_score(results),
+        "judge_modes": sorted({result.judge_mode for result in results}),
         "by_agent": by_agent,
     }
     path.write_text(json.dumps(summary, indent=2, ensure_ascii=True), encoding="utf-8")

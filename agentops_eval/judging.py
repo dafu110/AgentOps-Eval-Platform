@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from .security import redact_secrets
 class JudgeResult:
     score: float
     reasoning: str
+    mode: str
 
 
 def judge_output(case: EvalCase, output: str, judge_command: str = "") -> JudgeResult | None:
@@ -51,7 +53,7 @@ def _heuristic_judge(case: EvalCase, output: str) -> JudgeResult:
                     reasons.append(f"missing JSON field {field!r}")
     final_score = max(0.0, min(1.0, round(score, 4)))
     reasoning = "; ".join(reasons) if reasons else f"heuristic rubric passed: {case.checks.rubric}"
-    return JudgeResult(score=final_score, reasoning=reasoning)
+    return JudgeResult(score=final_score, reasoning=reasoning, mode="heuristic")
 
 
 def _judge_with_command(case: EvalCase, output: str, judge_command: str) -> JudgeResult:
@@ -62,7 +64,7 @@ def _judge_with_command(case: EvalCase, output: str, judge_command: str) -> Judg
         "rubric": case.checks.rubric,
     }
     completed = subprocess.run(
-        shlex.split(judge_command),
+        _split_command(judge_command),
         input=json.dumps(payload),
         text=True,
         capture_output=True,
@@ -70,12 +72,18 @@ def _judge_with_command(case: EvalCase, output: str, judge_command: str) -> Judg
         check=False,
     )
     if completed.returncode != 0:
-        return JudgeResult(score=0.0, reasoning=redact_secrets(completed.stderr.strip() or "judge command failed"))
+        return JudgeResult(score=0.0, reasoning=redact_secrets(completed.stderr.strip() or "judge command failed"), mode="external")
     try:
         record = json.loads(completed.stdout)
     except json.JSONDecodeError:
-        return JudgeResult(score=0.0, reasoning="judge command returned invalid JSON")
+        return JudgeResult(score=0.0, reasoning="judge command returned invalid JSON", mode="external")
     return JudgeResult(
         score=max(0.0, min(1.0, float(record.get("score", 0.0)))),
         reasoning=redact_secrets(str(record.get("reasoning", ""))),
+        mode="external",
     )
+
+
+def _split_command(command: str) -> list[str]:
+    normalized = command.replace("\\", "/") if os.name == "nt" else command
+    return shlex.split(normalized)

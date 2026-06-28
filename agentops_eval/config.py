@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import AgentConfig
+from .adapters import SUPPORTED_ADAPTERS
 
 
 class ConfigError(ValueError):
@@ -146,6 +147,11 @@ def _validate_agents(agents: list[AgentConfig], path: Path) -> list[AgentConfig]
     if duplicate_names:
         joined = ", ".join(duplicate_names)
         raise ConfigError(f"Duplicate agent names in {path}: {joined}")
+    unsupported_adapters = sorted({agent.adapter for agent in agents if agent.adapter not in SUPPORTED_ADAPTERS})
+    if unsupported_adapters:
+        joined = ", ".join(unsupported_adapters)
+        supported = ", ".join(sorted(SUPPORTED_ADAPTERS))
+        raise ConfigError(f"Unsupported adapter(s) in {path}: {joined}. Supported: {supported}")
     return agents
 
 

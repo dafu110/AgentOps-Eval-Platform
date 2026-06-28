@@ -62,6 +62,7 @@ class AgentRunResult:
     error_type: str | None = None
     score: float | None = None
     judge_reasoning: str = ""
+    judge_mode: str = "none"
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -78,5 +79,6 @@ class AgentRunResult:
             "error_type": self.error_type,
             "score": self.score,
             "judge_reasoning": self.judge_reasoning,
+            "judge_mode": self.judge_mode,
             "checks": [check.__dict__ for check in self.checks],
         }

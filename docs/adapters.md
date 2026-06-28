@@ -2,6 +2,17 @@
 
 AgentOps-Eval-Platform invokes real agents through small command adapters. This keeps the runner stable while each agent can be implemented as a CLI, HTTP service, SDK wrapper, or queue worker.
 
+The registry `adapter` value is not just a label: the runner validates and dispatches through it. Unsupported adapter names fail the run/config load instead of silently falling back to command execution.
+
+Supported adapters:
+
+| Adapter | Purpose | Execution shape |
+|---|---|---|
+| `command` | Plain stdin/stdout CLI or SDK wrapper | Runs the configured Python command. |
+| `http-json` | Generic HTTP JSON agent | Runs `agentops_eval.http_agent`. |
+| `agentflow-http` | AgentFlow Studio integration | Runs `agentops_eval.agentflow_adapter`. |
+| `bigdata-http` | Big Data Analytics Agent integration | Runs `agentops_eval.bigdata_adapter`. |
+
 ## Command Adapter Contract
 
 - Input: eval prompt on `stdin`.
@@ -15,6 +26,7 @@ Example:
 ```yaml
 agents:
   planner:
+    adapter: command
     command: "python path/to/planner_agent.py"
     timeout_seconds: 30
 ```
@@ -26,6 +38,7 @@ For HTTP agents, use the bundled wrapper:
 ```yaml
 agents:
   support_agent:
+    adapter: http-json
     command: "python -m agentops_eval.http_agent --url http://localhost:8080/invoke --output-field answer"
     timeout_seconds: 30
 ```
@@ -72,7 +85,7 @@ python app.py
 Then run:
 
 ```powershell
-python -m agentops_eval.cli run --suite sample --config configs/agents.yaml
+agentops-eval run --suite sample --config configs/agents.yaml
 ```
 
 Use `configs/agents.mock.yaml` when those services are not running.

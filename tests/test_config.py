@@ -89,6 +89,24 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ConfigError, "Duplicate agent names"):
                 load_agent_registry(config)
 
+    def test_load_agent_registry_rejects_unknown_adapter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = Path(temp_dir) / "agents.yaml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "agents:",
+                        "  one:",
+                        '    adapter: "unknown"',
+                        '    command: "python one.py"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ConfigError, "Unsupported adapter"):
+                load_agent_registry(config)
+
 
 if __name__ == "__main__":
     unittest.main()

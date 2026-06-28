@@ -51,6 +51,27 @@ class BaselineGateTests(unittest.TestCase):
             self.assertFalse(passed)
             self.assertFalse(report["checks"][0]["passed"])
 
+    def test_gate_can_require_external_judge(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir)
+            run_dir = runs_dir / "run-1"
+            run_dir.mkdir()
+            summary = {
+                "total": 1,
+                "passed": 1,
+                "failed": 0,
+                "pass_rate": 1.0,
+                "avg_score": 0.95,
+                "judge_modes": ["heuristic"],
+                "by_agent": {},
+            }
+            (run_dir / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+
+            passed, report = evaluate_gate(runs_dir, "run-1", None, 0.9, 0.02, 0.1, 0.8, True)
+
+            self.assertFalse(passed)
+            self.assertFalse(report["checks"][-1]["passed"])
+
 
 if __name__ == "__main__":
     unittest.main()

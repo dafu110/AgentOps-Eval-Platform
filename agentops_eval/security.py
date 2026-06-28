@@ -38,7 +38,7 @@ ALLOWED_EXECUTABLES = {"python", "python3", "py"}
 
 
 def validate_command_policy(agent: AgentConfig, approve_dangerous: bool = False) -> list[str]:
-    parts = shlex.split(agent.command)
+    parts = _split_command(agent.command)
     if not parts:
         raise SecurityPolicyError(f"Agent {agent.name} has empty command")
 
@@ -60,6 +60,11 @@ def validate_command_policy(agent: AgentConfig, approve_dangerous: bool = False)
         raise SecurityPolicyError(f"Agent {agent.name} danger_level={agent.danger_level} requires approval")
 
     return parts
+
+
+def _split_command(command: str) -> list[str]:
+    normalized = command.replace("\\", "/") if os.name == "nt" else command
+    return shlex.split(normalized)
 
 
 def build_sandbox_env(agent: AgentConfig) -> dict[str, str]:

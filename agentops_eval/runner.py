@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .adapters import run_command_agent
+from .adapters import run_agent_adapter
 from .checks import validate_output
 from .judging import judge_output
 from .models import AgentConfig, AgentRunResult, CheckResult, EvalCase
@@ -57,7 +57,7 @@ def run_agent_case(
     trace_id = make_trace_id(run_id, agent.name, case.case_id)
     events.emit("case_started", run_id=run_id, trace_id=trace_id, agent=agent.name, case_id=case.case_id)
     start = time.perf_counter()
-    command_result = run_command_agent(agent, case, approve_dangerous)
+    command_result = run_agent_adapter(agent, case, approve_dangerous)
 
     latency_ms = int((time.perf_counter() - start) * 1000)
     checks = validate_output(case, command_result.stdout) if not command_result.timed_out and command_result.exit_code == 0 else []
@@ -88,6 +88,7 @@ def run_agent_case(
         error_type=command_result.error_type,
         score=judge_result.score if judge_result else None,
         judge_reasoning=judge_result.reasoning if judge_result else "",
+        judge_mode=judge_result.mode if judge_result else "none",
     )
     trace_path = write_trace(run_dir, agent, case, result)
     events.emit(

@@ -8,6 +8,13 @@ from pathlib import Path
 from .models import AgentConfig, EvalCase
 from .security import build_sandbox_env, redact_secrets, validate_command_policy
 
+SUPPORTED_ADAPTERS = {
+    "command",
+    "http-json",
+    "agentflow-http",
+    "bigdata-http",
+}
+
 
 @dataclass(frozen=True)
 class AgentCommandResult:
@@ -16,6 +23,21 @@ class AgentCommandResult:
     exit_code: int | None
     timed_out: bool
     error_type: str | None
+
+
+def run_agent_adapter(agent: AgentConfig, case: EvalCase, approve_dangerous: bool = False) -> AgentCommandResult:
+    """Dispatch an eval case through the adapter named in agent config."""
+    adapter = agent.adapter.strip().lower() or "command"
+    if adapter not in SUPPORTED_ADAPTERS:
+        supported = ", ".join(sorted(SUPPORTED_ADAPTERS))
+        return AgentCommandResult(
+            stdout="",
+            stderr=f"Unsupported adapter {agent.adapter!r}; supported adapters: {supported}",
+            exit_code=None,
+            timed_out=False,
+            error_type="unsupported_adapter",
+        )
+    return run_command_agent(agent, case, approve_dangerous)
 
 
 def run_command_agent(agent: AgentConfig, case: EvalCase, approve_dangerous: bool = False) -> AgentCommandResult:

@@ -54,6 +54,25 @@ class TracingRunnerTests(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertGreaterEqual(result["score"], 0.8)
             self.assertGreaterEqual(summary["avg_score"], 0.8)
+            self.assertEqual(summary["judge_modes"], ["heuristic"])
+
+    def test_run_suite_fails_unsupported_adapter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir)
+            agents = [AgentConfig(name="alpha", command="python -m agentops_eval.mock_agent --name alpha", adapter="unknown")]
+            cases = [
+                EvalCase(
+                    case_id="hello",
+                    input_text="Say hello and mention AgentOps.",
+                    checks=EvalChecks(contains=("hello", "AgentOps"), min_length=5),
+                )
+            ]
+
+            run_dir = run_suite(agents, cases, runs_dir, "adapter-test")
+            result = json.loads((run_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()[0])
+
+            self.assertFalse(result["passed"])
+            self.assertEqual(result["error_type"], "unsupported_adapter")
 
 
 if __name__ == "__main__":

@@ -7,11 +7,12 @@ It runs shared test cases against each agent, validates outputs with determinist
 ## Quick Start
 
 ```powershell
-python -m agentops_eval.cli init
-python -m agentops_eval.cli list-agents
-python -m agentops_eval.cli run --suite sample --config configs/agents.mock.yaml
-python -m agentops_eval.cli report --run latest
-python -m agentops_eval.cli gate --run latest --min-pass-rate 0.90
+python -m pip install -e .[dev]
+agentops-eval init
+agentops-eval list-agents
+agentops-eval run --suite sample --config configs/agents.mock.yaml
+agentops-eval report --run latest
+agentops-eval gate --run latest --min-pass-rate 0.90
 ```
 
 The default registry in `configs/agents.yaml` is wired to the three existing real agents:
@@ -33,6 +34,7 @@ Example command shape:
 ```yaml
 agents:
   planner:
+    adapter: command
     command: "python path/to/planner_agent.py"
     timeout_seconds: 30
   researcher:
@@ -46,13 +48,13 @@ agents:
 Run all registered agents:
 
 ```powershell
-python -m agentops_eval.cli run --suite sample
+agentops-eval run --suite sample
 ```
 
 Run a subset:
 
 ```powershell
-python -m agentops_eval.cli run --suite sample --agent planner --agent executor
+agentops-eval run --suite sample --agent planner --agent executor
 ```
 
 ## Hard Capabilities
@@ -66,11 +68,12 @@ HTTP agents can use the bundled wrapper:
 ```yaml
 agents:
   support_agent:
+    adapter: http-json
     command: "python -m agentops_eval.http_agent --url http://localhost:8080/invoke --output-field answer"
     timeout_seconds: 30
 ```
 
-See `docs/adapters.md` for CLI, HTTP, SDK, and queue adapter patterns.
+The `adapter` field is validated and dispatched by the runner. Supported values are `command`, `http-json`, `agentflow-http`, and `bigdata-http`. See `docs/adapters.md` for CLI, HTTP, SDK, and queue adapter patterns.
 
 The bundled real adapters cover:
 
@@ -83,7 +86,7 @@ The bundled real adapters cover:
 Every run writes traces under `runs/<run-id>/traces/<agent>/<case>.json`. Failed cases also show their `trace_id` in `debug.md`.
 
 ```powershell
-python -m agentops_eval.cli trace --run latest --trace-id <trace-id>
+agentops-eval trace --run latest --trace-id <trace-id>
 ```
 
 ### Regression Baseline
@@ -91,13 +94,13 @@ python -m agentops_eval.cli trace --run latest --trace-id <trace-id>
 Promote a known-good run:
 
 ```powershell
-python -m agentops_eval.cli baseline promote --run latest --name main
+agentops-eval baseline promote --run latest --name main
 ```
 
 Compare later runs:
 
 ```powershell
-python -m agentops_eval.cli baseline compare --run latest --baseline main
+agentops-eval baseline compare --run latest --baseline main
 ```
 
 ### CI Gate
@@ -105,7 +108,7 @@ python -m agentops_eval.cli baseline compare --run latest --baseline main
 Fail builds when pass rate, error rate, or regression thresholds are exceeded:
 
 ```powershell
-python -m agentops_eval.cli gate --run latest --baseline main --min-pass-rate 0.95 --min-avg-score 0.80 --max-regression 0.02
+agentops-eval gate --run latest --baseline main --min-pass-rate 0.95 --min-avg-score 0.80 --max-regression 0.02
 ```
 
 GitHub Actions is configured in `.github/workflows/agentops-eval.yml`.
@@ -115,7 +118,7 @@ GitHub Actions is configured in `.github/workflows/agentops-eval.yml`.
 Run repeated smoke evals and return non-zero when the pass rate drops below threshold:
 
 ```powershell
-python -m agentops_eval.cli monitor --suite sample --iterations 5 --interval-seconds 60 --min-pass-rate 0.95 --webhook-url https://example.com/hook
+agentops-eval monitor --suite sample --iterations 5 --interval-seconds 60 --min-pass-rate 0.95 --webhook-url https://example.com/hook
 ```
 
 The monitor writes `runs/monitor/history.jsonl` and `runs/monitor/dashboard.html`.
@@ -125,9 +128,12 @@ The monitor writes `runs/monitor/history.jsonl` and `runs/monitor/dashboard.html
 Eval cases can include `checks.rubric` and `checks.min_score`. By default the platform uses a deterministic heuristic judge; for LLM-as-judge, pass a judge command that reads JSON from `stdin` and returns `{"score": 0.0-1.0, "reasoning": "..."}`.
 
 ```powershell
-python -m agentops_eval.cli run --suite sample --judge-command "python path/to/judge.py"
-python -m agentops_eval.cli calibrate --run latest --labels evals/human_labels.sample.jsonl
+agentops-eval run --suite sample --judge-command "python path/to/judge.py"
+agentops-eval calibrate --run latest --labels evals/human_labels.sample.jsonl
+agentops-eval gate --run latest --min-avg-score 0.85 --require-external-judge
 ```
+
+Use the built-in heuristic judge for smoke checks only. Release gates should pass `--judge-command`, calibrate it against human labels, and add `--require-external-judge` so a heuristic-only run cannot accidentally ship.
 
 ### Command Safety
 
@@ -138,7 +144,7 @@ Agent commands are restricted to Python entrypoints by default. High-risk comman
 - `agentops_eval/`: evaluation runner, checks, monitoring events, debugging report generation.
 - `configs/agents.yaml`: agent registry.
 - `configs/agents.mock.yaml`: offline mock registry for CI and smoke tests.
-- `evals/sample.jsonl`: starter eval cases.
+- `evals/sample.jsonl`: 12-case starter suite covering smoke, JSON format, safety, ambiguity, monitoring, debugging, and release-gate slices.
 - `docs/agent-spec.md`: authority, tool gates, loop, memory, escalation, and failure handling.
 - `docs/adapters.md`: real agent adapter contract and HTTP wrapper.
 - `docs/eval-plan.md`: metrics, rubric, baselines, pass bars, and regression gate.
@@ -149,7 +155,7 @@ Agent commands are restricted to Python entrypoints by default. High-risk comman
 
 ```powershell
 python -m unittest discover
-python -m agentops_eval.cli run --suite sample
+agentops-eval run --suite sample --config configs/agents.mock.yaml
 ```
 
 ## Output Artifacts

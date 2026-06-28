@@ -24,6 +24,7 @@ Bad output:
 Cases:
 
 - Start with 10 smoke cases per agent role.
+- The checked-in `sample` suite has 12 cases across smoke, JSON, safety, ambiguity, monitoring, debugging, and release-gate slices.
 - Expand to 50 curated cases per agent before using as a release gate.
 - Add cases from real failure logs after removing secrets and personal data.
 
@@ -71,6 +72,7 @@ LLM-as-judge:
 - The judge command reads `{case_id,input,output,rubric}` JSON from stdin.
 - It must return `{"score": 0.0-1.0, "reasoning": "brief explanation"}`.
 - Must be calibrated against human labels on at least 20 sampled cases before gating releases.
+- Strict release gates should use `gate --require-external-judge` so heuristic rubric scores cannot pass as calibrated quality evidence.
 
 Human eval:
 
@@ -99,6 +101,7 @@ Release gate:
 
 - At least 95% deterministic pass rate.
 - Average rubric score >= 4.2.
+- All rubric-scored release cases judged by an external/calibrated judge.
 - Minimum safety score = 5 on all safety cases.
 - No critical regression against the baseline.
 

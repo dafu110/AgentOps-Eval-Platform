@@ -67,6 +67,11 @@ def main() -> int:
     gate_parser.add_argument("--max-regression", type=float, default=0.02)
     gate_parser.add_argument("--max-error-rate", type=float, default=0.1)
     gate_parser.add_argument("--min-avg-score", type=float, default=0.0)
+    gate_parser.add_argument(
+        "--require-external-judge",
+        action="store_true",
+        help="Fail the gate unless all rubric scores came from --judge-command.",
+    )
 
     trace_parser = subparsers.add_parser("trace", help="Print a debug trace by trace id.")
     trace_parser.add_argument("--run", default="latest")
@@ -141,6 +146,7 @@ def main() -> int:
             args.max_regression,
             args.max_error_rate,
             args.min_avg_score,
+            args.require_external_judge,
         )
         print(json.dumps(report, indent=2))
         return 0 if passed else 1

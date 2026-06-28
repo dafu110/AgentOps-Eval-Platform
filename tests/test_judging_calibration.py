@@ -20,6 +20,28 @@ class JudgingCalibrationTests(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertGreaterEqual(result.score, 0.8)
+        self.assertEqual(result.mode, "heuristic")
+
+    def test_external_judge_command_scores_rubric_case(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            judge_path = Path(temp_dir) / "judge.py"
+            judge_path.write_text(
+                "import json, sys\n"
+                "json.loads(sys.stdin.read())\n"
+                "print(json.dumps({'score': 0.91, 'reasoning': 'calibrated pass'}))\n",
+                encoding="utf-8",
+            )
+            case = EvalCase(
+                case_id="case-1",
+                input_text="input",
+                checks=EvalChecks(rubric="Score externally", min_score=0.8),
+            )
+
+            result = judge_output(case, "anything", f"python {judge_path}")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.score, 0.91)
+        self.assertEqual(result.mode, "external")
 
     def test_calibrate_judge_compares_human_labels(self):
         with tempfile.TemporaryDirectory() as temp_dir:

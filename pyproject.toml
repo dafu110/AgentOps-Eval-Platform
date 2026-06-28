@@ -2,7 +2,42 @@
 name = "agentops-eval-platform"
 version = "0.1.0"
 description = "Evaluation, monitoring, and debugging platform for AI agents."
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "AgentOps Eval Platform Maintainers" }]
+keywords = ["agentops", "evals", "llm", "ci", "monitoring"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "build>=1.2",
+    "twine>=5.0",
+]
+
+[project.scripts]
+agentops-eval = "agentops_eval.cli:main"
+agentops-http-agent = "agentops_eval.http_agent:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agentops_eval*"]
 
 [tool.unittest]
 start-dir = "tests"

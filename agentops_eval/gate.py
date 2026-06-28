@@ -15,6 +15,7 @@ def evaluate_gate(
     max_regression: float,
     max_error_rate: float,
     min_avg_score: float = 0.0,
+    require_external_judge: bool = False,
 ) -> tuple[bool, dict[str, Any]]:
     current_path = runs_dir / run_id / "summary.json"
     current = load_summary(current_path)
@@ -22,6 +23,7 @@ def evaluate_gate(
     failed = int(current.get("failed", 0))
     pass_rate = float(current.get("pass_rate", 0))
     avg_score = current.get("avg_score")
+    judge_modes = set(current.get("judge_modes", []))
     error_rate = round(failed / total, 4) if total else 1.0
 
     checks: list[dict[str, Any]] = [
@@ -46,6 +48,15 @@ def evaluate_gate(
                 "passed": actual_score >= min_avg_score,
                 "actual": actual_score,
                 "threshold": min_avg_score,
+            }
+        )
+    if require_external_judge:
+        checks.append(
+            {
+                "name": "require_external_judge",
+                "passed": judge_modes == {"external"},
+                "actual": sorted(judge_modes),
+                "threshold": ["external"],
             }
         )
 
